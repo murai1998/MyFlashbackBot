@@ -3,20 +3,40 @@ require('dotenv').config()
 const TelegramBot = require('node-telegram-bot-api');
 const token = process.env.TOKEN;
 const bot = new TelegramBot(token, {polling: true});
+var sqlite = require('sqlite-sync'); 
+sqlite.connect('dbase.db'); 
 
 const dbase= {
-"new1": {"id":26, "from_id": 558626907},
-"ki": {"id":29, "from_id": 558626907}
+"2020-12-03": {"id":41, "from_id": 558626907},
+"20-12-31": {"id":44, "from_id": 558626907}
 }
 
+sqlite.run(`CREATE TABLE IF NOT EXISTS  flashback(
+    id  INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT NOT NULL, from_id INTEGER NOT NULL, message_id INTEGER NOT NULL);`,function(res){
+    if(res.error)
+        throw res.error;
+    console.log(res);
+});
+// sqlite.insert("flashback",
+// {
+// key: "2020-12-03",
+// from_id: 558626907,
+// message_id: 41
+// });
+// sqlite.insert("flashback",
+// {
+// key: "20-12-31",
+// from_id: 558626907,
+// message_id: 44
+// });
+console.log('DBASE', sqlite.run('SELECT * FROM flashback'))
 bot.onText(/\/get (.+)/, (msg, match) => {
-
   const chatId = msg.chat.id;
   const key = match[1]; 
-if (key in dbase) {
-    const message = dbase[key]
+  const message = getMessage(key)
+if (message.exists) {
     console.log('key', key)
-    bot.forwardMessage(chatId, message.from_id, message.id)
+    bot.forwardMessage(chatId, message.from_id, message.message_id)
 }
 
  
@@ -32,11 +52,22 @@ if (key in dbase) {
 //     // send back the matched "whatever" to the chat
 //     bot.sendMessage(chatId, resp);
 //   });
-// Listen for any kind of message. There are different kinds of
-// messages.
+// // Listen for any kind of message. There are different kinds of
+// // messages.
+
 bot.on('message', (msg) => {
   const chatId = msg.chat.id;
 
   // send a message to the chat acknowledging receipt of their message
   bot.sendMessage(chatId, JSON.stringify(msg));
 });
+
+function isMessage(key){
+    return sqlite.run("SELECT COUNT(*) as cnt FROM flashback WHERE `key` = ?", [key])[0].cnt !== 0
+}
+function getMessage(key){
+    const data = sqlite.run("SELECT * FROM flashback WHERE `key` = ? LIMIT 1", [key])
+    if (data.length == 0) {return {exists: false}}
+    data[0].exists = true
+    return data[0]
+}
