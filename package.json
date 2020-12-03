@@ -18,6 +18,8 @@
   "homepage": "https://github.com/murai1998/MyFlashbackBot#readme",
   "dependencies": {
     "dotenv": "^8.2.0",
-    "node-telegram-bot-api": "^0.50.0"
+    "node-telegram-bot-api": "^0.50.0",
+    "nodemon": "^2.0.6",
+    "sqlite-sync": "^0.3.9"
   }
 }
