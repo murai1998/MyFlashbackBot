@@ -1,0 +1,23 @@
+{
+  "name": "myflashbackbot",
+  "version": "1.0.0",
+  "description": "Telegram bot for keeping all memorable moments",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/murai1998/MyFlashbackBot.git"
+  },
+  "author": "murai1998",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/murai1998/MyFlashbackBot/issues"
+  },
+  "homepage": "https://github.com/murai1998/MyFlashbackBot#readme",
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "node-telegram-bot-api": "^0.50.0"
+  }
+}
