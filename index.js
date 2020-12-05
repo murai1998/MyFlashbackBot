@@ -23,8 +23,7 @@ const dbase = {
 // message_id: 41,
 
 // });
-
-console.log("DBASE", sqlite.run("SELECT * FROM flashback"));
+//----------------GET EVENT BY KEY---------------
 bot.onText(/\/get ([^;'\"]+)/, (msg, match) => {
   const chatId = msg.chat.id;
   const key = match[1];
@@ -36,15 +35,49 @@ bot.onText(/\/get ([^;'\"]+)/, (msg, match) => {
       bot.forwardMessage(chatId, x.from_id, x.message_id);
     });
   }
+  else {
+    bot.sendMessage(chatId, `You don't have any scheduled events on this day!`);
+  }
 });
-const addMode = {};
-bot.onText(/\/add ([^;'\"]+)/, (msg, match) => {
-  const chatId = msg.chat.id;
-  const key = match[1];
-  addMode[chatId] = { key: key, from: msg.from.id, id: msg.id };
-  var command = `What are you celebrating on this day?`;
-  bot.sendMessage(chatId, command);
-});
+
+
+
+//-----------DELETE EVENT BY KEY------------------
+bot.onText(/\/delete ([^;'\"]+)/, (msg, match) => {
+    const chatId = msg.chat.id;
+    const key = match[1];
+    const message = getMessage(key);
+    console.log('message', message)
+if(!message.exists){
+    bot.sendMessage(chatId, `You don't have any scheduled events on this day!`);
+    return 
+}
+if ((message.filter(x => x.from_id === msg.from.id).length == 0) && message.exists) {
+    bot.sendMessage(chatId, `You don't have any scheduled events on this day!`);
+    return 
+  }
+       
+        sqlite.delete(
+            "flashback",
+            {
+             key: key,
+             
+            },
+            function (res) {
+              if (res.error) {
+                bot.sendMessage(chatId, "Something went wrong!");
+                throw res.error;
+              } else {
+                bot.sendMessage(chatId, "Just deleted all events for this day!");
+              }
+            }
+          );
+ 
+    console.log('TTEEEXXTT')
+  });
+
+
+
 // bot.onText(/\/echo (.+)/, (msg, match) => {
 //     // 'msg' is the received Message from Telegram
 //     // 'match' is the result of executing the regexp above on the text content
@@ -59,6 +92,16 @@ bot.onText(/\/add ([^;'\"]+)/, (msg, match) => {
 // // Listen for any kind of message. There are different kinds of
 // // messages.
 
+//---------------ADD EVENT BY KEY-----------------
+const addMode = {};
+bot.onText(/\/add ([^;'\"]+)/, (msg, match) => {
+  const chatId = msg.chat.id;
+  const key = match[1];
+  addMode[chatId] = { key: key, from: msg.from.id, id: msg.id };
+  var command = `What are you celebrating on this day?`;
+  bot.sendMessage(chatId, command);
+});
+//-----------TYPE MESSAGE------------
 bot.on("message", (msg) => {
   const chatId = msg.chat.id;
   if (!(chatId in addMode)) {
@@ -84,10 +127,10 @@ bot.on("message", (msg) => {
   delete addMode[chatId];
 });
 
+//------------SHOW ALL EVENTS----------------
 bot.onText(/\/events/, (msg, match) => {
   const chatId = msg.chat.id;
   const fromId = msg.from.id;
-  console.log("Start ");
   const data = sqlite.run("SELECT * FROM flashback WHERE `from_id` = ?", [
     fromId,
   ]);
@@ -96,8 +139,8 @@ bot.onText(/\/events/, (msg, match) => {
     return;
   }
   var events = [];
-
   data.forEach((x) => {
+      if(!(events.includes(x.key)))
     events.push(`${x.key}`);
   });
   bot.sendMessage(chatId, events.join("\n"), { parse_mode: "markdown" });
@@ -110,8 +153,7 @@ function isMessage(key) {
     ])[0].cnt !== 0
   );
 }
-const tessst = sqlite.run("SELECT * FROM flashback WHERE key = '2020-12-03' ");
-console.log("list", tessst);
+//-------------EXTRACTING EVENT FROM THE DATABASE---------------
 function getMessage(key) {
   const data = sqlite.run("SELECT * FROM flashback WHERE `key` = ? ", [key]);
   console.log("data", data);
