@@ -17,20 +17,20 @@ sqlite.run(`CREATE TABLE IF NOT EXISTS  flashback(
         throw res.error;
     console.log(res);
 });
-sqlite.insert("flashback",
-{
-key: "2020-12-03",
-from_id: 558626907,
-message_id: 41,
+// sqlite.insert("flashback",
+// {
+// key: "2020-12-03",
+// from_id: 558626907,
+// message_id: 41,
 
-});
-sqlite.insert("flashback",
-{
-key: "20-12-31",
-from_id: 558626907,
-message_id: 44,
+// });
+// sqlite.insert("flashback",
+// {
+// key: "20-12-31",
+// from_id: 558626907,
+// message_id: 44,
 
-});
+// });
 console.log('DBASE', sqlite.run('SELECT * FROM flashback'))
 bot.onText(/\/get ([^;'\"]+)/, (msg, match) => {
   const chatId = msg.chat.id;
@@ -67,7 +67,8 @@ bot.sendMessage(chatId, command);
 
 bot.on('message', (msg) => {
   const chatId = msg.chat.id;
-if(!(chatId in addMode)) return 
+if(!(chatId in addMode)) { 
+    return }
 const row = addMode[chatId]
 sqlite.insert("flashback",
 {
@@ -82,11 +83,21 @@ message_id: msg.message_id
     }
     bot.sendMessage(chatId, "Just added this event!");
 });
-console.log('We received your message', addMode[chatId])
-delete addMode[chatId]
-  // send a message to the chat acknowledging receipt of their message
-  bot.sendMessage(chatId, JSON.stringify(msg));
+})
+
+bot.onText(/\/events/, (msg, match) => {
+    const chatId = msg.chat.id;
+    const fromId = msg.from.id
+    console.log('Start ')
+  const data = sqlite.run("SELECT * FROM flashback WHERE `from_id` = ? LIMIT 1", [fromId])
+  if(data.length == 0) {
+ bot.sendMessage(chatId, "Your event calendar is still empty");
+ return 
+  }
+var text = ''
+console.log('data', data)
 });
+
 
 function isMessage(key){
     return sqlite.run("SELECT COUNT(*) as cnt FROM flashback WHERE `key` = ?", [key])[0].cnt !== 0
