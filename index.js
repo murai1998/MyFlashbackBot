@@ -17,20 +17,14 @@ sqlite.run(`CREATE TABLE IF NOT EXISTS  flashback(
         throw res.error;
     console.log(res);
 });
-// sqlite.insert("flashback",
-// {
-// key: "2020-12-03",
-// from_id: 558626907,
-// message_id: 41,
+sqlite.insert("flashback",
+{
+key: "2020-12-03",
+from_id: 558626907,
+message_id: 41,
 
-// });
-// sqlite.insert("flashback",
-// {
-// key: "20-12-31",
-// from_id: 558626907,
-// message_id: 44,
+});
 
-// });
 console.log('DBASE', sqlite.run('SELECT * FROM flashback'))
 bot.onText(/\/get ([^;'\"]+)/, (msg, match) => {
   const chatId = msg.chat.id;
@@ -82,8 +76,11 @@ message_id: msg.message_id
         bot.sendMessage(chatId, "Something went wrong!");
         throw res.error
     }
+    else{
     bot.sendMessage(chatId, "Just added this event!");
+    }
 });
+delete addMode[chatId]
 })
 
 bot.onText(/\/events/, (msg, match) => {
