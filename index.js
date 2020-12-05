@@ -39,6 +39,7 @@ bot.onText(/\/get ([^;'\"]+)/, (msg, match) => {
 if (message.exists) {
     console.log('key', key)
     bot.forwardMessage(chatId, message.from_id, message.message_id)
+    bot.get
 }
 
  
@@ -89,13 +90,18 @@ bot.onText(/\/events/, (msg, match) => {
     const chatId = msg.chat.id;
     const fromId = msg.from.id
     console.log('Start ')
-  const data = sqlite.run("SELECT * FROM flashback WHERE `from_id` = ? LIMIT 1", [fromId])
+  const data = sqlite.run("SELECT * FROM flashback WHERE `from_id` = ?", [fromId])
   if(data.length == 0) {
  bot.sendMessage(chatId, "Your event calendar is still empty");
  return 
   }
-var text = ''
+var events = []
 console.log('data', data)
+data.forEach(x =>{
+events.push(`${x.key}`)
+})
+bot.sendMessage(chatId, events.join('\n'), {parse_mode: 'markdown'});
+
 });
 
 
