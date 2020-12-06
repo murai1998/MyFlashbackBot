@@ -66,12 +66,7 @@ bot.onText(/\/get ([^;'\"]+)/, (msg, match) => {
 //   });
 // // Listen for any kind of message. There are different kinds of
 // // messages.
-//---------------CANCEL ACTION-------------------
-bot.onText(/\/cancel/, (msg, match) => {
-    const chatId = msg.chat.id;
-    delete deleteMode[chatId];
-    delete addMode[chatId];
-  });
+
 //---------------ADD EVENT BY KEY-----------------
 const addMode = {};
 const deleteMode = {}
@@ -79,16 +74,17 @@ bot.onText(/\/add ([^;'\"]+)/, (msg, match) => {
   const chatId = msg.chat.id;
   const key = match[1];
   addMode[chatId] = { key: key, from: msg.from.id, id: msg.id };
-  var command = `What are you celebrating on this day?\nReply with your event or /cancel to exit this command`;
+  var command = `What are you celebrating on this day?\nReply with your event or /cancel to undo this command`;
   bot.sendMessage(chatId, command);
 });
+
 
 //-----------DELETE EVENT BY KEY------------------
 bot.onText(/\/delete ([^;'\"]+)/, (msg, match) => {
     const chatId = msg.chat.id;
     const key = match[1];
     const message = getMessage(key);
-if(!message.exists){
+  if(!message.exists){
     bot.sendMessage(chatId, `You don't have any scheduled events for this day!`);
     return 
 }
@@ -113,22 +109,7 @@ if ((message.filter(x => x.from_id === msg.from.id).length == 0) && message.exis
           }
         }
       );
-  }     
-        // sqlite.delete(
-        //     "flashback",
-        //     {
-        //      key: key,
-             
-        //     },
-        //     function (res) {
-        //       if (res.error) {
-        //         bot.sendMessage(chatId, "Something went wrong!");
-        //         throw res.error;
-        //       } else {
-        //         bot.sendMessage(chatId, "Just deleted all events for this day!");
-        //       }
-        //     }
-        //   );
+  }  
  else{
     deleteMode[chatId] = { key: key, from: msg.from.id, id: msg.id };
     var my_events = []
@@ -143,7 +124,7 @@ if ((message.filter(x => x.from_id === msg.from.id).length == 0) && message.exis
         } 
     })
     
-      my_events.unshift(`Reply with an index of the event you want to delete or /cancel to exit this command\nTo remove all events for this day reply "all"`)
+      my_events.unshift(`Reply with an index of the event you want to delete or /cancel to undo this command\nTo remove all events for this day reply "all"`)
       my_events.unshift('You have several scheduled events for this day')
       bot.sendMessage(chatId,  my_events.join("\n"));
       
@@ -153,10 +134,19 @@ if ((message.filter(x => x.from_id === msg.from.id).length == 0) && message.exis
 //-----------TYPE MESSAGE------------
 bot.on("message", (msg) => {
     const chatId = msg.chat.id;
+    console.log('ADD mode', addMode)
+    console.log('message text', msg.text)
+    if((msg.text.toLowerCase() == '/cancel') && (typeof msg.text !== undefined)) {  
+        bot.sendMessage(chatId, `Command has been canceled!`);
+        delete deleteMode[chatId];
+        delete addMode[chatId];
+        return;
+    }
+
     if(chatId in deleteMode) {
         const row2 = deleteMode[chatId];
         console.log('typeof', msg.text)
-        if(msg.text === 'all' || msg.text === 'ALL') {
+        if(msg.text.toLowerCase() === 'all') {
             sqlite.delete(
                 "flashback",
                 {
