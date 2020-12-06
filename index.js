@@ -4,7 +4,7 @@ const token = process.env.TOKEN;
 const bot = new TelegramBot(token, { polling: true });
 var sqlite = require("sqlite-sync");
 sqlite.connect("dbase.db");
-
+var delete_events = []
 const dbase = {
   "2020-12-03": { id: 41, from_id: 558626907 },
   "20-12-31": { id: 44, from_id: 558626907 },
@@ -16,13 +16,14 @@ sqlite.run(`CREATE TABLE IF NOT EXISTS  flashback(
         throw res.error;
     console.log(res);
 });
-sqlite.insert("flashback",
-{
-key: "2020-12-03",
-from_id: 558626907,
-message_id: 41,
-event: "My day"
-});
+// sqlite.insert("flashback",
+// {
+// key: "2020-12-03",
+// from_id: 558626907,
+// message_id: 41,
+// event: "My day"
+// });
+console.log('TABLE', sqlite.run('SELECT * FROM flashback'))
 //----------------GET EVENT BY KEY---------------
 bot.onText(/\/get ([^;'\"]+)/, (msg, match) => {
   const chatId = msg.chat.id;
@@ -30,20 +31,18 @@ bot.onText(/\/get ([^;'\"]+)/, (msg, match) => {
   const message = getMessage(key);
   console.log("message", message);
   if (message.exists) {
-    console.log("key", key);
-    message.forEach((x) => {
-      bot.forwardMessage(chatId, x.from_id, x.message_id);
-    });
+    const event_key = sqlite.run("SELECT event FROM flashback WHERE `key` = ? ", [key]);
+    var enents_key = []
+    event_key.forEach((x, i) =>{
+        enents_key.push(`${i + 1}) ${x.event}`)
+    })
+    enents_key.unshift(`Events Calendar for ${key}`)
+    bot.sendMessage(chatId,  enents_key.join("\n"));
   }
   else {
     bot.sendMessage(chatId, `You don't have any scheduled events on this day!`);
   }
 });
-
-
-
-
-
 
 
 // bot.onText(/\/echo (.+)/, (msg, match) => {
@@ -77,11 +76,11 @@ bot.onText(/\/delete ([^;'\"]+)/, (msg, match) => {
     const key = match[1];
     const message = getMessage(key);
 if(!message.exists){
-    bot.sendMessage(chatId, `You don't have any scheduled events on this day!`);
+    bot.sendMessage(chatId, `You don't have any scheduled events for this day!`);
     return 
 }
 if ((message.filter(x => x.from_id === msg.from.id).length == 0) && message.exists) {
-    bot.sendMessage(chatId, `You don't have any scheduled events on this day!`);
+    bot.sendMessage(chatId, `You don't have any scheduled events for this day!`);
     return 
   }
   if ((message.filter(x => x.from_id === msg.from.id).length == 1) && message.exists) {
@@ -119,21 +118,22 @@ if ((message.filter(x => x.from_id === msg.from.id).length == 0) && message.exis
         //   );
  else{
     deleteMode[chatId] = { key: key, from: msg.from.id, id: msg.id };
-    bot.sendMessage(chatId, "You have several scheduled events for this day:");
+    bot.sendMessage(chatId, "You have several scheduled events for this day");
     var my_events = []
+    delete_events = []
     var i = 0;
+
     message.forEach((x) => {
         if(x.from_id === msg.from.id){
-            my_events.push(x)
-            my_events[i].index = i + 1;
             i++;
+            my_events.push(`${i}) ${x.event}`)
+            delete_events.push(x.id)
         } 
     })
-
-  my_events.forEach((x) => {
-        bot.forwardMessage(chatId, x.from_id, x.message_id);
-      });
-      bot.sendMessage(chatId, `Reply with an index of the event you want to delete, if you want to remove all of them, reply "all"`);
+    
+      my_events.unshift(`Reply with an index of the event you want to delete, if you want to remove all of them, reply "all"`)
+      bot.sendMessage(chatId,  my_events.join("\n"));
+      
  }
 
   });
@@ -141,7 +141,44 @@ if ((message.filter(x => x.from_id === msg.from.id).length == 0) && message.exis
 bot.on("message", (msg) => {
     const chatId = msg.chat.id;
     if(chatId in deleteMode) {
-        console.log(msg)
+        const row2 = deleteMode[chatId];
+        console.log('typeof', msg.text)
+        if(msg.text === 'all' || msg.text === 'ALL') {
+            sqlite.delete(
+                "flashback",
+                {
+                 key: row2.key,
+                 from_id: row2.from
+                },
+                function (res) {
+                  if (res.error) {
+                    bot.sendMessage(chatId, "Something went wrong!");
+                    throw res.error;
+                  } else {
+                    bot.sendMessage(chatId, "Just deleted all events for this day!");
+                  }
+                }
+              );
+        }
+        if(Number(msg.text) >= 1 && Number(msg.text) <= (delete_events.length + 1)){
+            console.log('IN if')
+            console.log("MESSSAGES to delete", delete_events)
+            console.log("MESSSAGES to delete", delete_events[Number(msg.text) - 1])
+            sqlite.delete(
+                "flashback",
+                {
+                id: delete_events[Number(msg.text) -1]
+                },
+                function (res) {
+                  if (res.error) {
+                    bot.sendMessage(chatId, "Something went wrong!");
+                    throw res.error;
+                  } else {
+                    bot.sendMessage(chatId, `Just deleted this event from your calendar`);
+                  }
+                }
+              );
+        }
     }
     if (!(chatId in addMode)) {
       return;
@@ -166,7 +203,8 @@ bot.on("message", (msg) => {
     );
  
     delete addMode[chatId];
-   
+    delete deleteMode[chatId];
+    my_events = []
   });
   
   //------------SHOW ALL EVENTS----------------
