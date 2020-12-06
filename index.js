@@ -1,7 +1,7 @@
 require("dotenv").config();
 const TelegramBot = require("node-telegram-bot-api");
 const token = process.env.TOKEN;
-const bot = new TelegramBot(token, { polling: true });
+const bot = new TelegramBot(token, { polling: true, filepath: false });
 var sqlite = require("sqlite-sync");
 sqlite.connect("dbase.db");
 var delete_events = []
@@ -24,6 +24,14 @@ sqlite.run(`CREATE TABLE IF NOT EXISTS  flashback(
 // event: "My day"
 // });
 console.log('TABLE', sqlite.run('SELECT * FROM flashback'))
+//-----------------START----------------
+bot.onText(/\/start/, (msg, match) => {
+    const chatId = msg.chat.id;
+    bot.sendMessage(chatId, `
+     Hey, mate!\nWelcome to <b>MemorableBot</b>, place where you can save all your important events. Sounds great, right? \nIn order to make MemorableBot listening to you, here is the list of <b>helpful commands</b>:\n1)Create a new event: /add date\n2)Display all events on this data: /get date\n3)Display all events in your calendar:  /events\n4) Delete events: /delete day
+`
+    , { parse_mode: "HTML" });
+  });
 //----------------GET EVENT BY KEY---------------
 bot.onText(/\/get ([^;'\"]+)/, (msg, match) => {
   const chatId = msg.chat.id;
@@ -58,7 +66,12 @@ bot.onText(/\/get ([^;'\"]+)/, (msg, match) => {
 //   });
 // // Listen for any kind of message. There are different kinds of
 // // messages.
-
+//---------------CANCEL ACTION-------------------
+bot.onText(/\/cancel/, (msg, match) => {
+    const chatId = msg.chat.id;
+    delete deleteMode[chatId];
+    delete addMode[chatId];
+  });
 //---------------ADD EVENT BY KEY-----------------
 const addMode = {};
 const deleteMode = {}
@@ -66,7 +79,7 @@ bot.onText(/\/add ([^;'\"]+)/, (msg, match) => {
   const chatId = msg.chat.id;
   const key = match[1];
   addMode[chatId] = { key: key, from: msg.from.id, id: msg.id };
-  var command = `What are you celebrating on this day?`;
+  var command = `What are you celebrating on this day?\nReply with your event or /cancel to exit this command`;
   bot.sendMessage(chatId, command);
 });
 
@@ -118,7 +131,6 @@ if ((message.filter(x => x.from_id === msg.from.id).length == 0) && message.exis
         //   );
  else{
     deleteMode[chatId] = { key: key, from: msg.from.id, id: msg.id };
-    bot.sendMessage(chatId, "You have several scheduled events for this day");
     var my_events = []
     delete_events = []
     var i = 0;
@@ -131,7 +143,8 @@ if ((message.filter(x => x.from_id === msg.from.id).length == 0) && message.exis
         } 
     })
     
-      my_events.unshift(`Reply with an index of the event you want to delete, if you want to remove all of them, reply "all"`)
+      my_events.unshift(`Reply with an index of the event you want to delete or /cancel to exit this command\nTo remove all events for this day reply "all"`)
+      my_events.unshift('You have several scheduled events for this day')
       bot.sendMessage(chatId,  my_events.join("\n"));
       
  }
@@ -156,11 +169,13 @@ bot.on("message", (msg) => {
                     throw res.error;
                   } else {
                     bot.sendMessage(chatId, "Just deleted all events for this day!");
+                    return;
                   }
                 }
               );
+              delete deleteMode[chatId];
         }
-        if(Number(msg.text) >= 1 && Number(msg.text) <= (delete_events.length + 1)){
+        else if(Number(msg.text) >= 1 && Number(msg.text) <= (delete_events.length + 1)){
             console.log('IN if')
             console.log("MESSSAGES to delete", delete_events)
             console.log("MESSSAGES to delete", delete_events[Number(msg.text) - 1])
@@ -173,11 +188,21 @@ bot.on("message", (msg) => {
                   if (res.error) {
                     bot.sendMessage(chatId, "Something went wrong!");
                     throw res.error;
+                    
                   } else {
                     bot.sendMessage(chatId, `Just deleted this event from your calendar`);
+                    delete deleteMode[chatId];
+                    return;
                   }
                 }
               );
+              delete deleteMode[chatId];
+              return;
+        }
+        else{
+            bot.sendMessage(chatId, `Haven't received the expected response, try again`);
+            delete deleteMode[chatId];
+            return;
         }
     }
     if (!(chatId in addMode)) {
@@ -203,7 +228,6 @@ bot.on("message", (msg) => {
     );
  
     delete addMode[chatId];
-    delete deleteMode[chatId];
     my_events = []
   });
   
